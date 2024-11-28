@@ -186,3 +186,31 @@
     (ok true)
   )
 )
+
+;; Voter Verification Proof Map
+(define-map VoterVerificationProof
+  principal
+  {
+    verification-method: (string-ascii 50),
+    proof-hash: (buff 32),
+    verified-at: uint
+  }
+)
+
+;; Add Verification Proof
+(define-public (add-voter-verification-proof
+  (verification-method (string-ascii 50))
+  (proof-hash (buff 32))
+)
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-UNAUTHORIZED)
+    
+    (map-set VoterVerificationProof tx-sender {
+      verification-method: verification-method,
+      proof-hash: proof-hash,
+      verified-at: stacks-block-height
+    })
+    
+    (ok true)
+  )
+)
