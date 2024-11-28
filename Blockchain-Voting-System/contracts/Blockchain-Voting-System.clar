@@ -51,3 +51,49 @@
     metadata-uri: (string-ascii 200)
   }
 )
+
+
+;; Voting Record Map
+(define-map VotingRecord
+  {
+    election-id: uint,
+    voter: principal
+  }
+  {
+    candidate-id: uint,
+    timestamp: uint
+  }
+)
+
+;; Track total number of elections
+(define-data-var total-elections uint u0)
+
+;; Election State Transition Function
+(define-public (update-election-status 
+  (election-id uint)
+  (new-status uint)
+)
+  (begin
+    ;; Only contract owner can update status
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-UNAUTHORIZED)
+    
+    ;; Validate status transition
+    (asserts! 
+      (or 
+        (is-eq new-status STATUS-ACTIVE)
+        (is-eq new-status STATUS-COMPLETED)
+      ) 
+      ERR-INVALID-ELECTION
+    )
+    
+    ;; Update election status
+    (map-set ElectionDetails election-id 
+      (merge 
+        (unwrap! (map-get? ElectionDetails election-id) ERR-INVALID-ELECTION)
+        { status: new-status }
+      )
+    )
+    
+    (ok true)
+  )
+)
