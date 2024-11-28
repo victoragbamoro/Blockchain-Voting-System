@@ -97,3 +97,92 @@
     (ok true)
   )
 )
+
+;; Add Candidate to Election
+(define-public (add-candidate
+  (election-id uint)
+  (candidate-id uint)
+  (name (string-ascii 100))
+  (party (string-ascii 100))
+  (metadata-uri (string-ascii 200))
+)
+  (begin
+    ;; Only contract owner can add candidates
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-UNAUTHORIZED)
+    
+    ;; Validate election exists
+    (asserts! 
+      (is-some (map-get? ElectionDetails election-id)) 
+      ERR-INVALID-ELECTION
+    )
+    
+    ;; Add candidate
+    (map-set CandidateRegistry 
+      { election-id: election-id, candidate-id: candidate-id }
+      {
+        name: name,
+        party: party,
+        vote-count: u0,
+        metadata-uri: metadata-uri
+      }
+    )
+    
+    ;; Update total candidates
+    (map-set ElectionDetails election-id
+      (merge 
+        (unwrap! (map-get? ElectionDetails election-id) ERR-INVALID-ELECTION)
+        { total-candidates: (+ (get total-candidates 
+            (unwrap! (map-get? ElectionDetails election-id) ERR-INVALID-ELECTION)) 
+          u1) }
+      )
+    )
+    
+    (ok true)
+  )
+)
+
+;; Delegation Map
+(define-map VoteDelegation
+  {
+    delegator: principal,
+    election-id: uint
+  }
+  {
+    delegate: principal,
+    delegation-timestamp: uint
+  }
+)
+
+;; Delegate Voting Rights
+(define-public (delegate-vote
+  (election-id uint)
+  (delegate principal)
+)
+  (let 
+    (
+      (delegator tx-sender)
+      (voter-info (unwrap! 
+        (map-get? VoterRegistry delegator) 
+        ERR-INVALID-VOTER
+      ))
+    )
+    ;; Validate delegation
+    (asserts! (not (is-eq delegator delegate)) (err u6))
+    (asserts! (get is-registered voter-info) ERR-INVALID-VOTER)
+    (asserts! (not (get has-voted voter-info)) ERR-ALREADY-VOTED)
+    
+    ;; Record delegation
+    (map-set VoteDelegation 
+      { 
+        delegator: delegator, 
+        election-id: election-id 
+      }
+      {
+        delegate: delegate,
+        delegation-timestamp: stacks-block-height
+      }
+    )
+    
+    (ok true)
+  )
+)
