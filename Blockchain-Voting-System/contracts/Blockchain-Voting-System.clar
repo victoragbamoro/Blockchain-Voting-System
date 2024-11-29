@@ -454,3 +454,43 @@
   )
 )
 
+;; Cross-Chain Voting Bridge
+(define-map CrossChainVotingBridge
+  {
+    election-id: uint,
+    source-chain: (string-ascii 50),
+    destination-chain: (string-ascii 50)
+  }
+  {
+    bridge-status: uint,
+    total-bridged-votes: uint,
+    bridge-contract-address: (buff 32)
+  }
+)
+
+;; Initialize Cross-Chain Voting Bridge
+(define-public (initialize-cross-chain-bridge
+  (election-id uint)
+  (source-chain (string-ascii 50))
+  (destination-chain (string-ascii 50))
+  (bridge-contract-address (buff 32))
+)
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-UNAUTHORIZED)
+    
+    (map-set CrossChainVotingBridge 
+      {
+        election-id: election-id,
+        source-chain: source-chain,
+        destination-chain: destination-chain
+      }
+      {
+        bridge-status: u1,  ;; Active
+        total-bridged-votes: u0,
+        bridge-contract-address: bridge-contract-address
+      }
+    )
+    
+    (ok true)
+  )
+)
