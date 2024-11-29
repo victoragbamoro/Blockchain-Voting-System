@@ -214,3 +214,90 @@
     (ok true)
   )
 )
+
+;; Election Audit Log
+(define-map ElectionAuditLog
+  {
+    election-id: uint,
+    log-type: (string-ascii 50)
+  }
+  {
+    details: (string-ascii 500),
+    timestamp: uint
+  }
+)
+
+;; Log Election Event
+(define-public (log-election-event
+  (election-id uint)
+  (log-type (string-ascii 50))
+  (details (string-ascii 500))
+)
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-UNAUTHORIZED)
+    
+    (map-set ElectionAuditLog 
+      {
+        election-id: election-id,
+        log-type: log-type
+      }
+      {
+        details: details,
+        timestamp: stacks-block-height
+      }
+    )
+    
+    (ok true)
+  )
+)
+
+;; Election Challenge Map
+(define-map ElectionChallenge
+  {
+    election-id: uint,
+    challenger: principal
+  }
+  {
+    challenge-reason: (string-ascii 200),
+    challenge-timestamp: uint,
+    status: uint,
+    resolution-details: (optional (string-ascii 200))
+  }
+)
+
+;; Challenge Election Results
+(define-public (challenge-election
+  (election-id uint)
+  (challenge-reason (string-ascii 200))
+)
+  (begin
+    ;; Validate election is completed
+    (asserts! 
+      (is-eq 
+        (get status 
+          (unwrap! 
+            (map-get? ElectionDetails election-id) 
+            ERR-INVALID-ELECTION
+          )
+        )
+        STATUS-COMPLETED
+      )
+      (err u7)
+    )
+    
+    (map-set ElectionChallenge 
+      {
+        election-id: election-id,
+        challenger: tx-sender
+      }
+      {
+        challenge-reason: challenge-reason,
+        challenge-timestamp: stacks-block-height,
+        status: u0,  ;; Pending
+        resolution-details: none
+      }
+    )
+    
+    (ok true)
+  )
+)
