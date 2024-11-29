@@ -423,4 +423,34 @@
   )
 )
 
+;; Voter Identity Verification
+(define-map VoterIdentityVerification
+  principal
+  {
+    identity-hash: (buff 32),
+    verification-method: (string-ascii 50),
+    verification-timestamp: uint,
+    identity-status: uint
+  }
+)
+
+;; Verify Voter Identity
+(define-public (verify-voter-identity
+  (voter principal)
+  (identity-hash (buff 32))
+  (verification-method (string-ascii 50))
+)
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-UNAUTHORIZED)
+    
+    (map-set VoterIdentityVerification voter {
+      identity-hash: identity-hash,
+      verification-method: verification-method,
+      verification-timestamp: stacks-block-height,
+      identity-status: u1  ;; Verified
+    })
+    
+    (ok true)
+  )
+)
 
