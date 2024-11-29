@@ -251,6 +251,7 @@
   )
 )
 
+
 ;; Election Challenge Map
 (define-map ElectionChallenge
   {
@@ -301,3 +302,5 @@
     (ok true)
   )
 )
+
+
