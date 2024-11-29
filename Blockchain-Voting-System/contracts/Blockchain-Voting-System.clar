@@ -338,3 +338,39 @@
   )
 )
 
+;; Election Configuration Extended
+(define-map ElectionAdvancedConfig
+  uint  ;; Election ID
+  {
+    voting-mechanism: uint,
+    privacy-level: uint,
+    minimum-participation-threshold: uint,
+    voter-eligibility-criteria: (string-ascii 200),
+    geo-restrictions: (optional (list 10 (string-ascii 50)))
+  }
+)
+
+;; Configure Advanced Election Parameters
+(define-public (configure-advanced-election
+  (election-id uint)
+  (voting-mechanism uint)
+  (privacy-level uint)
+  (min-participation uint)
+  (eligibility-criteria (string-ascii 200))
+  (geo-restrictions (optional (list 10 (string-ascii 50))))
+)
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-UNAUTHORIZED)
+    
+    (map-set ElectionAdvancedConfig election-id {
+      voting-mechanism: voting-mechanism,
+      privacy-level: privacy-level,
+      minimum-participation-threshold: min-participation,
+      voter-eligibility-criteria: eligibility-criteria,
+      geo-restrictions: geo-restrictions
+    })
+    
+    (ok true)
+  )
+)
+
