@@ -303,4 +303,248 @@
   )
 )
 
+;; Voting Weight Tiers
+(define-constant VOTING-TIER-CITIZEN u1)
+(define-constant VOTING-TIER-EXPERT u2)
+(define-constant VOTING-TIER-STAKEHOLDER u3)
 
+;; Voting Weight Tier Map
+(define-map VotingWeightTiers
+  principal
+  {
+    tier: uint,
+    base-weight: uint,
+    special-privileges: (list 10 (string-ascii 50))
+  }
+)
+
+;; Assign Voting Weight Tier
+(define-public (assign-voting-tier
+  (voter principal)
+  (tier uint)
+  (base-weight uint)
+  (special-privileges (list 10 (string-ascii 50)))
+)
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-UNAUTHORIZED)
+    
+    (map-set VotingWeightTiers voter {
+      tier: tier,
+      base-weight: base-weight,
+      special-privileges: special-privileges
+    })
+    
+    (ok true)
+  )
+)
+
+;; Election Configuration Extended
+(define-map ElectionAdvancedConfig
+  uint  ;; Election ID
+  {
+    voting-mechanism: uint,
+    privacy-level: uint,
+    minimum-participation-threshold: uint,
+    voter-eligibility-criteria: (string-ascii 200),
+    geo-restrictions: (optional (list 10 (string-ascii 50)))
+  }
+)
+
+;; Configure Advanced Election Parameters
+(define-public (configure-advanced-election
+  (election-id uint)
+  (voting-mechanism uint)
+  (privacy-level uint)
+  (min-participation uint)
+  (eligibility-criteria (string-ascii 200))
+  (geo-restrictions (optional (list 10 (string-ascii 50))))
+)
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-UNAUTHORIZED)
+    
+    (map-set ElectionAdvancedConfig election-id {
+      voting-mechanism: voting-mechanism,
+      privacy-level: privacy-level,
+      minimum-participation-threshold: min-participation,
+      voter-eligibility-criteria: eligibility-criteria,
+      geo-restrictions: geo-restrictions
+    })
+    
+    (ok true)
+  )
+)
+
+;; Encrypted Vote Storage
+(define-map EncryptedVotes
+  {
+    election-id: uint,
+    voter: principal
+  }
+  {
+    encrypted-vote: (buff 256),
+    encryption-public-key: (buff 256),
+    vote-commitment-hash: (buff 32)
+  }
+)
+
+;; Submit Encrypted Vote
+(define-public (submit-encrypted-vote
+  (election-id uint)
+  (encrypted-vote (buff 256))
+  (encryption-public-key (buff 256))
+  (vote-commitment-hash (buff 32))
+)
+  (let 
+    (
+      (voter tx-sender)
+      (voter-info (unwrap! 
+        (map-get? VoterRegistry voter) 
+        ERR-INVALID-VOTER
+      ))
+    )
+    ;; Validate vote submission
+    (asserts! (get is-registered voter-info) ERR-INVALID-VOTER)
+    (asserts! (not (get has-voted voter-info)) ERR-ALREADY-VOTED)
+    
+    ;; Store encrypted vote
+    (map-set EncryptedVotes 
+      { 
+        election-id: election-id, 
+        voter: voter 
+      }
+      {
+        encrypted-vote: encrypted-vote,
+        encryption-public-key: encryption-public-key,
+        vote-commitment-hash: vote-commitment-hash
+      }
+    )
+    
+    (ok true)
+  )
+)
+
+;; Voter Identity Verification
+(define-map VoterIdentityVerification
+  principal
+  {
+    identity-hash: (buff 32),
+    verification-method: (string-ascii 50),
+    verification-timestamp: uint,
+    identity-status: uint
+  }
+)
+
+;; Verify Voter Identity
+(define-public (verify-voter-identity
+  (voter principal)
+  (identity-hash (buff 32))
+  (verification-method (string-ascii 50))
+)
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-UNAUTHORIZED)
+    
+    (map-set VoterIdentityVerification voter {
+      identity-hash: identity-hash,
+      verification-method: verification-method,
+      verification-timestamp: stacks-block-height,
+      identity-status: u1  ;; Verified
+    })
+    
+    (ok true)
+  )
+)
+
+;; Cross-Chain Voting Bridge
+(define-map CrossChainVotingBridge
+  {
+    election-id: uint,
+    source-chain: (string-ascii 50),
+    destination-chain: (string-ascii 50)
+  }
+  {
+    bridge-status: uint,
+    total-bridged-votes: uint,
+    bridge-contract-address: (buff 32)
+  }
+)
+
+;; Initialize Cross-Chain Voting Bridge
+(define-public (initialize-cross-chain-bridge
+  (election-id uint)
+  (source-chain (string-ascii 50))
+  (destination-chain (string-ascii 50))
+  (bridge-contract-address (buff 32))
+)
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-UNAUTHORIZED)
+    
+    (map-set CrossChainVotingBridge 
+      {
+        election-id: election-id,
+        source-chain: source-chain,
+        destination-chain: destination-chain
+      }
+      {
+        bridge-status: u1,  ;; Active
+        total-bridged-votes: u0,
+        bridge-contract-address: bridge-contract-address
+      }
+    )
+    
+    (ok true)
+  )
+)
+
+;; Machine Learning Voting Prediction
+(define-map VotingPredictionModel
+  uint  ;; Election ID
+  {
+    prediction-accuracy: uint,
+    predicted-winner: uint,
+    confidence-score: uint,
+    analysis-timestamp: uint,
+    prediction-features: (list 10 uint)
+  }
+)
+
+;; Generate Voting Prediction
+(define-public (generate-voting-prediction
+  (election-id uint)
+  (prediction-features (list 10 uint))
+)
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-UNAUTHORIZED)
+    
+    (let 
+      (
+        (prediction-result 
+          (calculate-prediction-model 
+            election-id 
+            prediction-features
+          )
+        )
+      )
+      (map-set VotingPredictionModel election-id {
+        prediction-accuracy: (get accuracy prediction-result),
+        predicted-winner: (get winner prediction-result),
+        confidence-score: (get confidence prediction-result),
+        analysis-timestamp: stacks-block-height,
+        prediction-features: prediction-features
+      })
+    )
+    
+    (ok true)
+  )
+)
+
+;; Prediction Model Calculation (Simulated)
+(define-private (calculate-prediction-model
+  (election-id uint)
+  (features (list 10 uint))
+)
+  {
+    accuracy: u85,
+    winner: u2,  ;; Candidate ID
+    confidence: u90
+  }
+)
