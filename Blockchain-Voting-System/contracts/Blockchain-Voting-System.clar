@@ -374,3 +374,53 @@
   )
 )
 
+;; Encrypted Vote Storage
+(define-map EncryptedVotes
+  {
+    election-id: uint,
+    voter: principal
+  }
+  {
+    encrypted-vote: (buff 256),
+    encryption-public-key: (buff 256),
+    vote-commitment-hash: (buff 32)
+  }
+)
+
+;; Submit Encrypted Vote
+(define-public (submit-encrypted-vote
+  (election-id uint)
+  (encrypted-vote (buff 256))
+  (encryption-public-key (buff 256))
+  (vote-commitment-hash (buff 32))
+)
+  (let 
+    (
+      (voter tx-sender)
+      (voter-info (unwrap! 
+        (map-get? VoterRegistry voter) 
+        ERR-INVALID-VOTER
+      ))
+    )
+    ;; Validate vote submission
+    (asserts! (get is-registered voter-info) ERR-INVALID-VOTER)
+    (asserts! (not (get has-voted voter-info)) ERR-ALREADY-VOTED)
+    
+    ;; Store encrypted vote
+    (map-set EncryptedVotes 
+      { 
+        election-id: election-id, 
+        voter: voter 
+      }
+      {
+        encrypted-vote: encrypted-vote,
+        encryption-public-key: encryption-public-key,
+        vote-commitment-hash: vote-commitment-hash
+      }
+    )
+    
+    (ok true)
+  )
+)
+
+
