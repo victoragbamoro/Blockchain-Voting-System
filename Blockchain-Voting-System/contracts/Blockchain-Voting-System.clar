@@ -303,4 +303,38 @@
   )
 )
 
+;; Voting Weight Tiers
+(define-constant VOTING-TIER-CITIZEN u1)
+(define-constant VOTING-TIER-EXPERT u2)
+(define-constant VOTING-TIER-STAKEHOLDER u3)
+
+;; Voting Weight Tier Map
+(define-map VotingWeightTiers
+  principal
+  {
+    tier: uint,
+    base-weight: uint,
+    special-privileges: (list 10 (string-ascii 50))
+  }
+)
+
+;; Assign Voting Weight Tier
+(define-public (assign-voting-tier
+  (voter principal)
+  (tier uint)
+  (base-weight uint)
+  (special-privileges (list 10 (string-ascii 50)))
+)
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-UNAUTHORIZED)
+    
+    (map-set VotingWeightTiers voter {
+      tier: tier,
+      base-weight: base-weight,
+      special-privileges: special-privileges
+    })
+    
+    (ok true)
+  )
+)
 
